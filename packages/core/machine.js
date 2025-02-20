@@ -6,6 +6,8 @@ function valueEnumerableWritable(value) {
   return { enumerable: true, writable: true, value };
 }
 
+export const self = "__SELF__";
+
 export let d = {};
 let truthy = () => true;
 let empty = () => ({});
@@ -42,7 +44,7 @@ function makeTransition(from, to, ...args) {
   let reducers = stack(filter(reduceType, args).map(t => t.fn), identity, callForward);
   return create(this, {
     from: valueEnumerable(from),
-    to: valueEnumerable(to),
+    to: valueEnumerable(to === self ? from : to),
     guards: valueEnumerable(guards),
     reducers: valueEnumerable(reducers)
   });
