@@ -88,6 +88,16 @@ declare module 'robot3' {
   ): Transition<F>
 
   /**
+   * An `enter` function is a type of transition that occurs when first entering a state.
+   * This executes effects without changing the state.
+   *
+   * @param args - Any extra argument will be evaluated to check if they are a Reducer or an Action.
+   */
+  export function enter<F extends string, C, E>(
+    ...args: (Reducer<C, E> | Action<C, E>)[]
+  ): Transition<F>
+
+  /**
    * A `guard` is a method that determines if a transition can proceed.
    * Returning true allows the transition to occur, returning false prevents it from doing so and leaves the state in its current place.
    *
