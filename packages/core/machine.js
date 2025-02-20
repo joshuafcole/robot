@@ -6,8 +6,6 @@ function valueEnumerableWritable(value) {
   return { enumerable: true, writable: true, value };
 }
 
-export const self = "__SELF__";
-
 export let d = {};
 let truthy = () => true;
 let empty = () => ({});
@@ -44,7 +42,7 @@ function makeTransition(from, to, ...args) {
   let reducers = stack(filter(reduceType, args).map(t => t.fn), identity, callForward);
   return create(this, {
     from: valueEnumerable(from),
-    to: valueEnumerable(to === self ? from : to),
+    to: valueEnumerable(to),
     guards: valueEnumerable(guards),
     reducers: valueEnumerable(reducers)
   });
@@ -52,11 +50,14 @@ function makeTransition(from, to, ...args) {
 
 let transitionType = {};
 let immediateType = {};
+let enterType = {};
 export let transition = makeTransition.bind(transitionType);
 export let immediate = makeTransition.bind(immediateType, null);
+export let enter = makeTransition.bind(enterType, null, null);
 
-function enterImmediate(machine, service, event) {
-  return transitionTo(service, machine, event, this.immediates) || machine;
+function enterImmediate(machine, service, event, reentering = false) {
+  if(!reentering) transitionTo(service, machine, event, this.enters, reentering);
+  return transitionTo(service, machine, event, this.immediates, reentering) || machine;
 }
 
 function transitionsToMap(transitions) {
@@ -72,11 +73,13 @@ let stateType = { enter: identity };
 export function state(...args) {
   let transitions = filter(transitionType, args);
   let immediates = filter(immediateType, args);
+  let enters = filter(enterType, args);
   let desc = {
     final: valueEnumerable(args.length === 0),
     transitions: valueEnumerable(transitionsToMap(transitions))
   };
   if(immediates.length) {
+    desc.enters = valueEnumerable(enters);
     desc.immediates = valueEnumerable(immediates);
     desc.enter = valueEnumerable(enterImmediate);
   }
@@ -164,14 +167,14 @@ function transitionTo(service, machine, fromEvent, candidates) {
 
       let original = machine.original || machine;
       let newMachine = create(original, {
-        current: valueEnumerable(to),
+        current: valueEnumerable(to === null ? from : to),
         original: { value: original }
       });
 
       if (d._onEnter) d._onEnter(machine, to, service.context, context, fromEvent);
       let state = newMachine.state.value;
       service.machine = newMachine;
-      let ret = state.enter(newMachine, service, fromEvent);
+      let ret = state.enter(newMachine, service, fromEvent, to === null || from === to);
       service.onChange(service);
       return ret;
     }
